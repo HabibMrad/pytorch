@@ -10,6 +10,8 @@ import torch.nn as nn
 from torch.testing import FileCheck
 from typing import Any
 
+import torchdynamo
+
 # Make the helper files in test/ importable
 pytorch_test_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(pytorch_test_dir)
@@ -505,6 +507,7 @@ class TestClassType(JitTestCase):
         with self.assertRaisesRegexWithHighlight(RuntimeError, "object has no attribute or method", ""):
             sc = torch.jit.script(fun)
 
+    @torchdynamo.disable
     @unittest.skipIf(IS_SANDCASTLE, "Importing like this doesn't work in fbcode")
     def test_imported_classes(self):
         import jit._imported_class_test.foo
@@ -1230,6 +1233,7 @@ class TestClassType(JitTestCase):
 
         self.checkScript(test_function, (1,))
 
+    @torchdynamo.disable
     def test_properties(self):
         """
         Test that a scripted class can make use of the @property decorator.

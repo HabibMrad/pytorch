@@ -1,6 +1,7 @@
 # Owner(s): ["module: codegen"]
 
 import torch
+import torchdynamo
 from torch.testing._internal.common_utils import TestCase, run_tests
 from torch.testing._internal.logging_tensor import LoggingTensor, LoggingTensorReentrant, capture_logs, log_input
 from torch.utils._pytree import tree_map
@@ -59,6 +60,7 @@ class InplaceLoggingTensor(LoggingTensorReentrant):
 
 class TestFunctionalization(TestCase):
 
+    @torchdynamo.disable
     def get_logs(self, func, inpt, *, reapply_views=False):
         input_clone_logging = LoggingTensor(inpt.clone())
         input_functional_logging = torch._to_functional_tensor(input_clone_logging)
@@ -603,6 +605,7 @@ $6 = torch._ops.aten.add.Tensor($5, 1)""")
 
         self.assert_functionalization(f, torch.ones(2, 2))
 
+    @torchdynamo.disable
     def test_mixed_wrappers_valid(self):
         def f(x, y):
             z = x + y
@@ -632,6 +635,8 @@ $3 = torch._ops.aten.add.Tensor($2, 1)""")
             x1_not_functional.add_(x2_functional)
 
     # This tests the behavior of functionalization with multiple layers of wrapped tensor subclasses.
+
+    @torchdynamo.disable
     def test_multiple_levels_of_wrapping(self):
         def f(x):
             # call an inplace op and have it get logged twice (by the outer + inner wrapper)

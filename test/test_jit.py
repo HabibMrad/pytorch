@@ -2,6 +2,7 @@
 # Owner(s): ["oncall: jit"]
 
 import torch
+import torchdynamo
 
 # This is how we include tests located in test/jit/...
 # They are included here so that they are invoked when you call `test_jit.py`,
@@ -2003,6 +2004,7 @@ graph(%Ra, %Rb):
             check(fn, torch.jit.script(fn), x, y)
             check(fn, torch.jit.trace(fn, (x, y)), x, y)
 
+    @torchdynamo.disable
     def test_python_ivalue(self):
         # Test if pure python object can be hold as IValue and conversion
         # between IValue and PyObject are correct
@@ -2773,6 +2775,7 @@ graph(%Ra, %Rb):
         with self.assertRaisesRegex(Exception, "Mutable default parameters"):
             torch.jit.script(Test())
 
+    @torchdynamo.disable
     def test_warnings(self):
         import warnings
 
@@ -3974,6 +3977,7 @@ def foo(x):
                 o2 = cu.f()
             self.assertEqual(o1, o2)
 
+    @torchdynamo.disable
     def test_cpp_module_iterator(self):
         a = nn.Module()
         a.name = 'a'
@@ -6446,6 +6450,7 @@ a")
         inputs = self._make_scalar_vars([42, 1337], torch.int64)
         self.checkScript(func, inputs, optimize=True)
 
+    @torchdynamo.disable
     def test_while_nest_if(self):
         def func(a, b):
             # type: (int, int) -> int
@@ -6602,6 +6607,7 @@ a")
         checkMathWrap("remainder", 2)
         checkMathWrap("factorial", 1, is_float=False, ret_type="int", vals=[(i, 0) for i in range(-2, 10)])
 
+    @torchdynamo.disable
     def test_if_nest_while(self):
         def func(a, b):
             # type: (int, int) -> int
@@ -10193,6 +10199,7 @@ dedent """
         cm_load = torch.jit.load(buffer)
         FileCheck().check_not("Double(1, 3)").run(cm_load.forward.graph)
 
+    @torchdynamo.disable
     def test_type_annotations_repeated_list(self):
         @torch.jit.script
         def float_fn(x, y):
@@ -11655,6 +11662,7 @@ dedent """
         python_type = eval(none_type.annotation_str, g)
         assert python_type is type(None)
 
+    @torchdynamo.disable
     def test_zip_enumerate_modulelist(self):
         class Sub(torch.nn.Module):
             def __init__(self):

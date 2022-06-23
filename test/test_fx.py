@@ -35,6 +35,8 @@ from torch.fx.operator_schemas import get_signature_for_torch_op
 from copy import deepcopy
 from collections import namedtuple
 
+import torchdynamo
+
 from torch.fx.proxy import TraceError
 from torch.fx._compatibility import _BACK_COMPAT_OBJECTS, _MARKED_WITH_COMATIBLITY
 
@@ -4104,6 +4106,7 @@ class TestVisionTracing(JitTestCase):
 
     @classmethod
     def generate_test_fn(cls, name, model_fn, x, kwargs):
+        @torchdynamo.disable
         def run_test(self):
             model = model_fn(**kwargs)
             model = model.eval()

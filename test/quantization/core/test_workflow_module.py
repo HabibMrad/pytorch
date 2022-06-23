@@ -2,6 +2,7 @@
 
 # Torch
 import torch
+import torchdynamo
 from torch.ao.quantization import (
     MinMaxObserver,
     PerChannelMinMaxObserver,
@@ -421,6 +422,7 @@ class _ReferenceHistogramObserver(HistogramObserver):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @torchdynamo.disable
     @torch.jit.ignore
     def _non_linear_param_search(self):
         r"""Non-linear parameter search.

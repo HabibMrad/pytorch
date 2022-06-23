@@ -1676,6 +1676,65 @@ class ObjectPair(UnittestPair):
     CLS = object
 
 
+def skip_dynamo(test_object):
+    skip_classes = {
+        # Unknown - CI fails with memory corruption
+        "TestDict",
+    }
+
+    skip_tests = {
+        # Filename - test_functionalize.py
+        "test_metadata_change",
+
+        # Filename - test_nn.py
+        # Hooks
+        "test_module_global_forward_preforward_hook_writeable",
+        "test_module_global_hooks",
+        "test_global_and_local_hooks_order",
+        # Unknown
+        "test_spectral_norm",
+        "test_pixel_shuffle_unshuffle",
+        # Hooks
+        "test_hook_backward_writeable",
+        "test_hook_forward_preforward_writable",
+        "test_hook_no_requires_grad",
+        "test_hooks",
+        # parameters
+        "test_ParameterList",
+        "test_ParameterDict",
+        "test_parameter_assignment",
+        # Ref cycle
+        "test_load_state_dict_ref_cycle",
+        # Unknown
+        "test_embedding_bag_1D_padding_idx_cpu_float32",
+        "test_embedding_bag_1D_padding_idx_cpu_float64",
+        "test_pdist_cpu_gradgrad_unimplemented",
+        "test_rnn_pruning",
+        "test_rnn_weight_norm",
+        "test_clip_grad_norm_error_if_nonfinite_cpu",
+
+        # Filename - test_torch.py
+        "test_backward_hooks_traverse",
+        "test_dead_weak_ref",
+        "test_tensor_cycle_via_dict",
+        "test_tensor_dict_dealloc",
+        "test_tensor_weakref_dealloc",
+        "test_cpp_warnings_have_python_context_cpu",
+        "test_discontiguous_out_cumsum_cpu",
+        "test_strides_propagation_cpu",
+        "test_pickle_parameter",
+        "test_pickle_parameter_no_requires_grad",
+        # Should be easy to fix
+        "test_reversed",
+    }
+
+    test_module = test_object.__class__.__name__
+    test_method = test_object._testMethodName
+    if test_module in skip_classes or test_method in skip_tests:
+        return True
+    return False
+
+
 # This implements a variant of assertRaises/assertRaisesRegex where we first test
 # if the exception is NotImplementedError, and if so just skip the test instead
 # of failing it.
@@ -1826,7 +1885,27 @@ class TestCase(expecttest.TestCase):
             failures_before = 0 if result is None else len(result.failures)  # num tests marked as failed before starting
             errors_before = 0 if result is None else len(result.errors)  # num tests marked as errored before starting
 
-        super().run(result=result)
+        use_dynamo = os.getenv('PYTORCH_TEST_WITH_DYNAMO') == '1'
+
+        if use_dynamo:
+            import torchdynamo
+            # torchdynamo.config.trace = True
+            # torchdynamo.config.debug = True
+            torchdynamo.config.print_internal_exceptions = False
+            # TODO - Collect errors with fake tensors
+            torchdynamo.config.fake_tensor_propagation = False
+            # Do not spend time on helper functions that are called with different inputs
+            torchdynamo.config.cache_size_limit = 4
+            if skip_dynamo(self):
+                ctx = contextlib.nullcontext()
+            else:
+                ctx = torchdynamo.optimize("eager")
+            with ctx:
+                super().run(result=result)
+            torchdynamo.reset()
+        else:
+            super().run(result=result)
+
         # Early terminate test if necessary.
         if self._should_stop_test_suite():
             if result.wasSuccessful():
